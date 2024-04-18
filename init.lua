@@ -191,6 +191,42 @@ vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper win
 
 --remap esc as jk
 vim.api.nvim_set_keymap('i', 'jk', '<Esc>', { noremap = true, silent = true })
+
+--------------------------------------------------------------------------------
+-- BASIC PYTHON-RELATED OPTIONS
+
+-- The filetype-autocmd runs a function when opening a file with the filetype
+-- "python". This method allows you to make filetype-specific configurations. In
+-- there, you have to use `opt_local` instead of `opt` to limit the changes to
+-- just that buffer. (As an alternative to using an autocmd, you can also put those
+-- configurations into a file `/after/ftplugin/{filetype}.lua` in your
+-- nvim-directory.)
+vim.api.nvim_create_autocmd('FileType', {
+  pattern = 'python', -- filetype for which to run the autocmd
+  callback = function()
+    -- use pep8 standards
+    vim.opt_local.expandtab = true
+    vim.opt_local.shiftwidth = 4
+    vim.opt_local.tabstop = 4
+    vim.opt_local.softtabstop = 4
+
+    -- folds based on indentation https://neovim.io/doc/user/fold.html#fold-indent
+    -- if you are a heavy user of folds, consider using `nvim-ufo`
+    vim.opt_local.foldmethod = 'indent'
+
+    -- automatically capitalize boolean values. Useful if you come from a
+    -- different language, and lowercase them out of habit.
+    vim.cmd.inoreabbrev '<buffer> true True'
+    vim.cmd.inoreabbrev '<buffer> false False'
+
+    -- in the same way, we can fix habits regarding comments or None
+    vim.cmd.inoreabbrev '<buffer> -- #'
+    vim.cmd.inoreabbrev '<buffer> null None'
+    vim.cmd.inoreabbrev '<buffer> none None'
+    vim.cmd.inoreabbrev '<buffer> nil None'
+  end,
+})
+
 -- [[ Basic Autocommands ]]
 --  See `:help lua-guide-autocommands`
 
@@ -255,7 +291,32 @@ require('lazy').setup({
       keys = { { '<C-?>', '<cmd>ChatGPT<cr>', desc = 'Toggle ChatGPT' } },
     },
   },
+  -- tip for neovim on startup
+  {
+    'TobinPalmer/Tip.nvim',
+    event = 'VimEnter',
+    init = function()
+      -- Default config
+      -- @type Tip.config
+      require('tip').setup {
+        seconds = 2,
+        title = 'Tip!',
+        url = 'https://vtip.43z.one', -- Or https://vimiscool.tech/neotip
+      }
+    end,
+  },
 
+  --dashboard
+  {
+    'nvimdev/dashboard-nvim',
+    event = 'VimEnter',
+    config = function()
+      require('dashboard').setup {
+        -- config
+      }
+    end,
+    dependencies = { { 'nvim-tree/nvim-web-devicons' } },
+  },
   -- toggle term
   {
     'akinsho/toggleterm.nvim',
@@ -440,6 +501,7 @@ require('lazy').setup({
     dependencies = {
       -- Automatically install LSPs and related tools to stdpath for Neovim
       'williamboman/mason.nvim',
+      'jay-babu/mason-nvim-dap.nvim',
       'williamboman/mason-lspconfig.nvim',
       'WhoIsSethDaniel/mason-tool-installer.nvim',
 
@@ -603,7 +665,7 @@ require('lazy').setup({
       -- Ensure the servers and tools above are installed
       --  To check the current status of installed tools and/or manually install
       --  other tools, you can run
-      --    :Mason
+      --/:Mason
       --
       --  You can press `g?` for help in this menu.
       require('mason').setup()
@@ -613,6 +675,8 @@ require('lazy').setup({
       local ensure_installed = vim.tbl_keys(servers or {})
       vim.list_extend(ensure_installed, {
         'stylua', -- Used to format Lua code
+        'ruff', -- python
+        'debugpy',
       })
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
@@ -660,6 +724,7 @@ require('lazy').setup({
         lua = { 'stylua' },
         -- Conform can also run multiple formatters sequentially
         python = { 'isort', 'black' },
+        markdown = { 'inject' },
         --
         -- You can use a sub-list to tell conform to run *until* a formatter
         -- is found.
@@ -835,7 +900,7 @@ require('lazy').setup({
     'nvim-treesitter/nvim-treesitter',
     build = ':TSUpdate',
     opts = {
-      ensure_installed = { 'bash', 'c', 'html', 'lua', 'luadoc', 'markdown', 'vim', 'vimdoc' },
+      ensure_installed = { 'bash', 'c', 'html', 'lua', 'python', 'luadoc', 'markdown', 'vim', 'vimdoc' },
       -- Autoinstall languages that are not installed
       auto_install = true,
       highlight = {
