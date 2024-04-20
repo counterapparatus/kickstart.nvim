@@ -205,14 +205,15 @@ vim.api.nvim_create_autocmd('FileType', {
   pattern = 'python', -- filetype for which to run the autocmd
   callback = function()
     -- use pep8 standards
-    vim.opt_local.expandtab = true
-    vim.opt_local.shiftwidth = 4
-    vim.opt_local.tabstop = 4
-    vim.opt_local.softtabstop = 4
+    -- vim.opt_local.expandtab = true
+    -- vim.opt_local.shiftwidth = 4
+    -- vim.opt_local.tabstop = 4
+    -- vim.opt_local.softtabstop = 4
+    -- vim.opt_local.colorcolumn = 79 -- not working atm
 
     -- folds based on indentation https://neovim.io/doc/user/fold.html#fold-indent
     -- if you are a heavy user of folds, consider using `nvim-ufo`
-    vim.opt_local.foldmethod = 'indent'
+    --  vim.opt_local.foldmethod = 'indent'
 
     -- automatically capitalize boolean values. Useful if you come from a
     -- different language, and lowercase them out of habit.
@@ -276,11 +277,61 @@ require('lazy').setup({
 
   -- "gc" to comment visual regions/lines
   { 'numToStr/Comment.nvim', opts = {} },
+
+  -- bufferline.nvim
+  {
+    'akinsho/bufferline.nvim',
+    event = 'VeryLazy',
+    keys = {
+      { '<leader>tp', '<Cmd>BufferLineTogglePin<CR>', desc = 'Toggle Pin' },
+      { '<leader>tP', '<Cmd>BufferLineGroupClose ungrouped<CR>', desc = 'Delete Non-Pinned Buffers' },
+      { '<leader>to', '<Cmd>BufferLineCloseOthers<CR>', desc = 'Delete Other Buffers' },
+      { '<leader>tr', '<Cmd>BufferLineCloseRight<CR>', desc = 'Delete Buffers to the Right' },
+      { '<leader>tl', '<Cmd>BufferLineCloseLeft<CR>', desc = 'Delete Buffers to the Left' },
+      { '<S-h>', '<cmd>BufferLineCyclePrev<cr>', desc = 'Prev Buffer' },
+      { '<S-l>', '<cmd>BufferLineCycleNext<cr>', desc = 'Next Buffer' },
+      { '[b', '<cmd>BufferLineCyclePrev<cr>', desc = 'Prev Buffer' },
+      { ']b', '<cmd>BufferLineCycleNext<cr>', desc = 'Next Buffer' },
+    },
+    opts = {
+      options = {
+      -- stylua: ignore
+      close_command = function(n) require("mini.bufremove").delete(n, false) end,
+      -- stylua: ignore
+      right_mouse_command = function(n) require("mini.bufremove").delete(n, false) end,
+        diagnostics = 'nvim_lsp',
+        always_show_bufferline = false,
+
+        offsets = {
+          {
+            filetype = 'neo-tree',
+            text = 'Neo-tree',
+            highlight = 'Directory',
+            text_align = 'left',
+          },
+        },
+      },
+    },
+    config = function(_, opts)
+      require('bufferline').setup(opts)
+      -- Fix bufferline when restoring a session
+      vim.api.nvim_create_autocmd('BufAdd', {
+        callback = function()
+          vim.schedule(function()
+            pcall(nvim_bufferline)
+          end)
+        end,
+      })
+    end,
+  },
+  -- ChatGPT
   {
     'jackMort/ChatGPT.nvim',
     event = 'VeryLazy',
     config = function()
-      require('chatgpt').setup()
+      require('chatgpt').setup {
+        api_key_cmd = 'bw get notes platform.openai.com',
+      }
     end,
     dependencies = {
       'MunifTanjim/nui.nvim',
@@ -288,16 +339,16 @@ require('lazy').setup({
       'folke/trouble.nvim',
       'nvim-telescope/telescope.nvim',
       cmd = 'ChatGPT',
-      keys = { { '<C-?>', '<cmd>ChatGPT<cr>', desc = 'Toggle ChatGPT' } },
+      keys = { { '<C->', '<cmd>ChatGPT<cr>', desc = 'Toggle ChatGPT' } },
     },
   },
-  -- tip for neovim on startup
+  -- tip for neovim on startup (not currently working, maybe has to do with required notification plugin
   {
     'TobinPalmer/Tip.nvim',
     event = 'VimEnter',
     init = function()
       -- Default config
-      -- @type Tip.config
+      ---@type Tip.config
       require('tip').setup {
         seconds = 2,
         title = 'Tip!',
@@ -306,7 +357,16 @@ require('lazy').setup({
     end,
   },
 
-  --dashboard
+  -- autopairing of (){}[] etc
+  {
+    'windwp/nvim-autopairs',
+    event = 'InsertEnter',
+    config = true,
+    -- use opts = {} for passing setup options
+    -- this is equalent to setup({}) function
+  },
+
+  --dashboard (currently has weird lines)
   {
     'nvimdev/dashboard-nvim',
     event = 'VimEnter',
@@ -675,7 +735,7 @@ require('lazy').setup({
       local ensure_installed = vim.tbl_keys(servers or {})
       vim.list_extend(ensure_installed, {
         'stylua', -- Used to format Lua code
-        'ruff', -- python
+        'ruff-lsp', -- python
         'debugpy',
       })
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
@@ -938,7 +998,7 @@ require('lazy').setup({
   --
   require 'kickstart.plugins.debug',
   require 'kickstart.plugins.indent_line',
-  require 'kickstart.plugins.lint',
+  -- require 'kickstart.plugins.lint', --seems kind busted
 
   -- NOTE: The import below can automatically add your own plugins, configuration, etc from `lua/custom/plugins/*.lua`
   --    This is the easiest way to modularize your config.
